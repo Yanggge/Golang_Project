@@ -16,18 +16,27 @@ type Zadacha struct {
 	Status  bool
 }
 
+type Events struct {
+	Input  string
+	Errors string
+	Time   string
+}
+
 func main() {
 	fmt.Println("Планировщик задач")
 	DoSlice := make([]Zadacha, 0, 20)
+	EventSlice := make([]Events, 0, 50)
 	for {
-		fmt.Println("Выберите задачу:\n добавить задачу\n удалить задачу\n мои задачи\n изменить статус\n выход")
+		fmt.Println("Выберите задачу:\n добавить задачу\n удалить задачу\n мои задачи\n изменить статус\n логи\n выход")
 		fmt.Print("ввод команды:")
 		scanner := bufio.NewScanner(os.Stdin)
 		if ok := scanner.Scan(); !ok {
+			Logevents(&EventSlice, "", "Ошибка ввода")
 			fmt.Println("Ошибка ввода")
 		}
 		text := scanner.Text()
 
+		Logevents(&EventSlice, text, "")
 		if text == "выход" {
 			fmt.Println("До встречи")
 			break
@@ -35,12 +44,13 @@ func main() {
 
 		switch text {
 		case "добавить задачу":
-			fmt.Print("Введите заголовок: ")
+			fmt.Print("Введите заголовок не больше 1 слова: ")
 			scanner.Scan()
 			theme := scanner.Text()
 			fields := strings.Fields(theme)
 			if len(fields) != 1 {
-				fmt.Println("Вы ничего не указали")
+				Logevents(&EventSlice, theme, "Некоректный ввод!")
+				fmt.Println("Некоректный ввод!")
 				continue
 			}
 
@@ -49,6 +59,7 @@ func main() {
 			content := scanner.Text()
 			fields2 := strings.Fields(content)
 			if len(fields2) < 1 {
+				Logevents(&EventSlice, content, "Вы ничего не указали")
 				fmt.Println("Вы ничего не указали")
 				continue
 			}
@@ -69,15 +80,17 @@ func main() {
 			fmt.Println("Время создания: ", time.Now().Format("2006-01-02 15:04:05"))
 			fmt.Println("Статус: ", map[bool]string{true: "выполнена", false: "не выполнена"}[status])
 			fmt.Println("========================")
+
 		case "удалить задачу":
 			fmt.Print("Удалить задачу № ")
 			scanner.Scan()
 			del, err := strconv.Atoi(scanner.Text())
 			if err != nil || del > len(DoSlice) {
-				fmt.Println("Вы плохо указали")
+				Logevents(&EventSlice, strconv.Itoa(del), "Вы ввели несуществующую задачу")
+				fmt.Println("Вы ввели несуществующую задачу")
 			} else {
 				DoSlice = append(DoSlice[:del-1], DoSlice[del:]...)
-				fmt.Println("Вы удалили задачу № ", del)
+				fmt.Println("Вы успешно удалили задачу № ", del)
 			}
 		case "мои задачи":
 			for i, _ := range DoSlice {
@@ -90,40 +103,65 @@ func main() {
 				fmt.Println("========================")
 			}
 		case "изменить статус":
-			StatusEchange(scanner, &DoSlice)
+			StatusEchange(scanner, &DoSlice, &EventSlice)
+		case "логи":
+			for i, _ := range EventSlice {
+				fmt.Println("#", i+1)
+				fmt.Println("Input: ", EventSlice[i].Input)
+				fmt.Println("Errors: ", EventSlice[i].Errors)
+				fmt.Println("Time add: ", EventSlice[i].Time)
+			}
 		default:
+			Logevents(&EventSlice, text, "Вы ввели неправильную команду")
 			fmt.Println("Вы ввели неправильную команду")
 		}
 	}
 }
 
-func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha) {
+// ////////////////////
+func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha, EvSlice *[]Events) {
 	fmt.Print("У какой задачи изменить статус? Задача № ")
-	scanner.Scan()
+	if ok := scanner.Scan(); !ok {
+		Logevents(EvSlice, "", "Ошибка ввода")
+		fmt.Println("Ошибка ввода")
+	}
 	num, err := strconv.Atoi(scanner.Text())
 	if err != nil || num > len(*slice) {
-		fmt.Println("Ошибка ввода")
+		Logevents(EvSlice, strconv.Itoa(num), "Вы ввели несуществующую задачу")
+		fmt.Println("Вы ввели несуществующую задачу")
 		return
 	}
 
-	fmt.Println("Введите статус выполнена/не выполнена\nстатус: ")
+	fmt.Print("Введите статус выполнена/не выполнена\nстатус: ")
 	scanner.Scan()
 	status := scanner.Text()
 	if strings.TrimSpace(status) == "" {
-		fmt.Print("Вы ничего не указали!")
+		Logevents(EvSlice, status, "Вы ничего не указали!")
+		fmt.Println("Вы ничего не указали!")
 		return
 	}
 
 	switch status {
 	case "выполнена":
 		(*slice)[num-1].Status = true
-		fmt.Print("Вы изменили статус у задачи № ", num)
+		fmt.Println("Вы изменили статус у задачи № ", num)
+		fmt.Println("Время изменения: ", time.Now().Format("2006-01-02 15:04:05"))
 	case "не выполнена":
 		(*slice)[num-1].Status = false
 		fmt.Print("Вы изменили статус у задачи № ", num)
 	default:
+		Logevents(EvSlice, status, "Вы указали неверный статус!")
 		fmt.Println("Вы указали неверный статус!")
 	}
+}
+
+// ////////////////////
+func Logevents(slice *[]Events, input string, err string) {
+	*slice = append(*slice, Events{
+		Input:  input,
+		Errors: err,
+		Time:   time.Now().Format("2006-01-02 15:04:05"),
+	})
 }
 
 /*
