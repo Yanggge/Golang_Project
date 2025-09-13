@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-type Zadacha struct {
+type Zadacha struct { // Структура для задач
 	Theme   string
 	Content string
 	Time    string
 	Status  bool
 }
 
-type Events struct {
+type Events struct { // Cтруктура для логов
 	Input  string
 	Errors string
 	Time   string
@@ -25,141 +25,175 @@ type Events struct {
 func main() {
 	fmt.Println("Планировщик задач")
 	DoSlice := make([]Zadacha, 0, 20)
-	EventSlice := make([]Events, 0, 50)
+	EvSlice := make([]Events, 0, 20)
+
 	for {
-		fmt.Println("Выберите задачу:\n добавить задачу\n удалить задачу\n мои задачи\n изменить статус\n логи\n выход")
-		fmt.Print("ввод команды:")
-		scanner := bufio.NewScanner(os.Stdin)
-		if ok := scanner.Scan(); !ok {
-			Logevents(&EventSlice, "", "Ошибка ввода")
+		fmt.Print("Введите команду: ")
+		scanner := bufio.NewScanner(os.Stdin) // Пакет для работы с польз. вводом
+
+		if ok := scanner.Scan(); !ok { // Scanner.Scan дает право писать ввод
+			LogEvents(&EvSlice, "", "Ошибка ввода") // функция для логов (в слайс логов вписываю инпут - пустоту и в ошибку - ошибка ввода)
 			fmt.Println("Ошибка ввода")
+			continue // прервать цикл и начать следующий
 		}
-		text := scanner.Text()
-
-		Logevents(&EventSlice, text, "")
-		if text == "выход" {
+		text := scanner.Text() // принимает значение польз. ввода
+		if text == "exit" {
+			LogEvents(&EvSlice, text, "До встречи")
 			fmt.Println("До встречи")
-			break
+			break // разорвать цикл
 		}
 
-		switch text {
-		case "добавить задачу":
+		LogEvents(&EvSlice, text, "") // функция для логов (будет принимать всеь польз.ввод)(кроме ошибок. для них я и вписывал эту функцию в каждое условие)
+
+		switch text { // switch - тот же if/else но удобнее и понятнее выглядит код
+		case "add": // аналог if
 			fmt.Print("Введите заголовок не больше 1 слова: ")
 			scanner.Scan()
-			theme := scanner.Text()
-			fields := strings.Fields(theme)
-			if len(fields) != 1 {
-				Logevents(&EventSlice, theme, "Некоректный ввод!")
-				fmt.Println("Некоректный ввод!")
+			theme := strings.TrimSpace(scanner.Text())
+			fields := strings.Fields(theme) // strings.Fields принимает значение theme и переносит в слайс без пробелов, где каждой слово - 1 элемент: fields[0] - 1 слово и тд.
+			if len(fields) != 1 {           // тут как раз, если длина эта слайса fields не равна 1, значит там больше 1 слова
+				LogEvents(&EvSlice, theme, "Вы указали неверный заголовок")
+				fmt.Println("Вы указали неверный заголовок")
 				continue
 			}
 
 			fmt.Print("Введите содержание: ")
 			scanner.Scan()
 			content := scanner.Text()
-			fields2 := strings.Fields(content)
-			if len(fields2) < 1 {
-				Logevents(&EventSlice, content, "Вы ничего не указали")
-				fmt.Println("Вы ничего не указали")
+			if strings.TrimSpace(content) == "" {
+				LogEvents(&EvSlice, content, "Вы ничего не ввели")
+				fmt.Println("Вы ничего не ввели")
 				continue
 			}
 
-			status := false
+			status := false // по умолчанию будет false
 
-			DoSlice = append(DoSlice, Zadacha{
+			DoSlice = append(DoSlice, Zadacha{ // добавление в слайс элементов с структрой Zadacha
 				Theme:   theme,
 				Content: content,
-				Time:    time.Now().Format("2006-01-02 15:04:05"),
+				Time:    time.Now().Format("2006-01-02 15:04:05"), // можно записать сразу, без создания переменной
 				Status:  status,
 			})
-
-			fmt.Println("========================")
-			fmt.Println("Задача № ", len(DoSlice))
+			fmt.Println("==========================================")
+			fmt.Println("Задача № ", len(DoSlice)) // len - длина слайса = кол-ву значений, т.е. задач (для нумерации как раз подходит)
 			fmt.Println("Заголовок: ", theme)
 			fmt.Println("Содержание: ", content)
 			fmt.Println("Время создания: ", time.Now().Format("2006-01-02 15:04:05"))
-			fmt.Println("Статус: ", map[bool]string{true: "выполнена", false: "не выполнена"}[status])
-			fmt.Println("========================")
+			fmt.Println("Статус: ", map[bool]string{true: "выполнено", false: "не выполнено"}[status]) // тут я создал анониманую мапу, которая принимает 2 значения и сразу в зависимости от status, выводит
+			fmt.Println("==========================================")
 
-		case "удалить задачу":
-			fmt.Print("Удалить задачу № ")
+		case "del":
+			fmt.Print("Введите заголовок задачи, которую хотите удалить: ")
 			scanner.Scan()
-			del, err := strconv.Atoi(scanner.Text())
-			if err != nil || del > len(DoSlice) {
-				Logevents(&EventSlice, strconv.Itoa(del), "Вы ввели несуществующую задачу")
-				fmt.Println("Вы ввели несуществующую задачу")
-			} else {
-				DoSlice = append(DoSlice[:del-1], DoSlice[del:]...)
-				fmt.Println("Вы успешно удалили задачу № ", del)
+			tittle := strings.TrimSpace(scanner.Text()) // strings.TrimSpace убирает все пробелы (и табы, и переносы строк)
+			if strings.TrimSpace(tittle) == "" {        // проверка на пустоту: если убрать все пробелы и будет пустота, значит ничего не введено)
+				LogEvents(&EvSlice, tittle, "Вы ничего не ввели")
+				fmt.Println("Вы ничего не ввели")
+				continue
 			}
-		case "мои задачи":
-			for i, _ := range DoSlice {
-				fmt.Println("========================")
-				fmt.Println("Задача № ", i+1)
+			NewSlice := make([]Zadacha, 0, len(DoSlice)) // создаем новый слайс с длиной как у DoSlice
+			found := false
+
+			for _, v := range DoSlice { // перебор задач слайса DoSlice (v-задача слайса)
+				if v.Theme == tittle { // если введенный заголовок == заголовку в задаче данного круга(это же цикл)
+					found = true // меняет found на true
+					fmt.Println("Задача удалена")
+					continue // прервать круг  (то есть, он не дойдет до append)
+				}
+				NewSlice = append(NewSlice, v) //	 каждый новый круг, если задача не найдена, добавлять ее в новый слайс
+				// Так у нас получится что каждый новый круг будет добавлять задачи в новый слайс, а когда попадется задача с указанным заголовком, она пропустится (continue) и не запишется в слайс
+			}
+			if found { // если он нашел словов то found=true, т.е заменяем старый слайс, на новый где задачи с этим заголовком нет
+				DoSlice = NewSlice
+				fmt.Println(NewSlice)
+			} else { // если же заздачи с таким заголовком нет, то это и выводим
+				LogEvents(&EvSlice, tittle, "Задача с таким заголовком не найдена")
+				fmt.Println("Задача с таким заголовком не найдена")
+			}
+
+			//Удаление по номеру задачи (старый варинат)
+		/* 	del, err := strconv.Atoi(scanner.Text())
+		if err != nil || del > len(DoSlice) || del == 0 {
+			LogEvents(&EvSlice, strconv.Itoa(del), "Вы указали несуществующую задачу")
+			fmt.Println("Вы указали несуществующую задачу")
+			continue
+		}
+		DoSlice = append(DoSlice[:del-1], DoSlice[del:]...)
+		fmt.Println("Вы удалили задачу", del)
+		*/
+
+		case "list": // вывод всех задач
+			fmt.Println("==========================================")
+			for i, _ := range DoSlice { // i у нас в данном случае - index слайса [0-1-2-3...], _ - сама задача, но т.к. у нас она не используется, ставим прочерк "_"
+				fmt.Println("Задача № ", i+1) // т.к. index начинается с 0, а задача с 1, просто прибавляем 1
 				fmt.Println("Заголовок: ", DoSlice[i].Theme)
 				fmt.Println("Содержание: ", DoSlice[i].Content)
 				fmt.Println("Время создания: ", time.Now().Format("2006-01-02 15:04:05"))
-				fmt.Println("Статус: ", map[bool]string{true: "выполнена", false: "не выполнена"}[DoSlice[i].Status])
-				fmt.Println("========================")
+				fmt.Println("Статус: ", map[bool]string{true: "выполнено", false: "не выполнено"}[DoSlice[i].Status])
 			}
-		case "изменить статус":
-			StatusEchange(scanner, &DoSlice, &EventSlice)
-		case "логи":
-			for i, _ := range EventSlice {
+			fmt.Println("==========================================")
+
+		case "status": // вызов функции для изменения статуса
+			StatusEchange(scanner, &DoSlice, &EvSlice)
+
+		case "logs": // вывод логов
+			fmt.Println("==========================================")
+			for i, _ := range EvSlice {
 				fmt.Println("#", i+1)
-				fmt.Println("Input: ", EventSlice[i].Input)
-				fmt.Println("Errors: ", EventSlice[i].Errors)
-				fmt.Println("Time add: ", EventSlice[i].Time)
+				fmt.Println("Input: ", EvSlice[i].Input)
+				fmt.Println("Errors: ", EvSlice[i].Errors)
+				fmt.Println("Timw: ", EvSlice[i].Time)
 			}
-		default:
-			Logevents(&EventSlice, text, "Вы ввели неправильную команду")
-			fmt.Println("Вы ввели неправильную команду")
+			fmt.Println("==========================================")
+
+		case "help": // вывод команд
+			fmt.Println("==========================================")
+			fmt.Println("Добавить задачу - add")
+			fmt.Println("Удалить задачу - del")
+			fmt.Println("Вывести список задач - list")
+			fmt.Println("Изменить статус задачи - status")
+			fmt.Println("Вывод логов - logs")
+			fmt.Println("Выйти - exit")
+			fmt.Println("==========================================")
+
+		default: // аналог else
+			LogEvents(&EvSlice, text, "Вы ввели неизвестную команду")
+			fmt.Println("Вы ввели неизвестную команду")
 		}
 	}
 }
 
-// ////////////////////
-func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha, EvSlice *[]Events) {
-	fmt.Print("У какой задачи изменить статус? Задача № ")
-	if ok := scanner.Scan(); !ok {
-		Logevents(EvSlice, "", "Ошибка ввода")
-		fmt.Println("Ошибка ввода")
-	}
-	num, err := strconv.Atoi(scanner.Text())
-	if err != nil || num > len(*slice) {
-		Logevents(EvSlice, strconv.Itoa(num), "Вы ввели несуществующую задачу")
-		fmt.Println("Вы ввели несуществующую задачу")
+func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha, evslice *[]Events) { // функци смены статуса (переносим из main функции - scanner, slice задач и логов) * - метка, указатель
+	fmt.Print("Изменить статус у задачи № ")
+	scanner.Scan()
+	num, err := strconv.Atoi(scanner.Text())         // strconv.Atoi - string in integer (строка в число), без err не работает
+	if err != nil || num > len(*slice) || num == 0 { // если err не пустота или число больше длины слайса или число равно нулю
+		LogEvents(evslice, strconv.Itoa(num), "Вы указали несуществующую задачу")
+		fmt.Println("Вы указали несуществующую задачу")
 		return
 	}
 
-	fmt.Print("Введите статус выполнена/не выполнена\nстатус: ")
+	fmt.Print("Укажите какой статус задать: выполнено/не выполнено: ")
 	scanner.Scan()
 	status := scanner.Text()
-	if strings.TrimSpace(status) == "" {
-		Logevents(EvSlice, status, "Вы ничего не указали!")
-		fmt.Println("Вы ничего не указали!")
-		return
-	}
-
 	switch status {
-	case "выполнена":
-		(*slice)[num-1].Status = true
-		fmt.Println("Вы изменили статус у задачи № ", num)
-		fmt.Println("Время изменения: ", time.Now().Format("2006-01-02 15:04:05"))
-	case "не выполнена":
+	case "выполнено":
+		(*slice)[num-1].Status = true // слайс[номер задачи - 1, т.к индекс наинается с нуля]
+
+	case "не выполнено":
 		(*slice)[num-1].Status = false
-		fmt.Print("Вы изменили статус у задачи № ", num)
+
 	default:
-		Logevents(EvSlice, status, "Вы указали неверный статус!")
-		fmt.Println("Вы указали неверный статус!")
+		LogEvents(evslice, status, "Вы указали неверный статус")
+		fmt.Println("Вы указали неверный статус")
+		return
 	}
 }
 
-// ////////////////////
-func Logevents(slice *[]Events, input string, err string) {
+func LogEvents(slice *[]Events, input string, errors string) { // функция логов
 	*slice = append(*slice, Events{
 		Input:  input,
-		Errors: err,
+		Errors: errors,
 		Time:   time.Now().Format("2006-01-02 15:04:05"),
 	})
 }
@@ -198,7 +232,7 @@ func Logevents(slice *[]Events, input string, err string) {
     - add {заголовок задачи из одного слова} {текст задачи из одного или нескольких слов} — эта команда позволяет добавлять новые задачи в список задач
     - list — эта команда позволяет получить полный список всех задач
     - del {заголовок существующей задачи} — эта команда позволяет удалить задачу по её заголовку
-    - done {заголовок существующей задачи} — эта команда позволяет отменить задачу как выполненную
-    - events — эта команда позволяет получить список всех событий
+    - status {номер задачи} — эта команда позволяет изменить статус задачи
+    - logs — эта команда позволяет получить список всех событий
     - exit — эта команда позволяет завершить выполнение программы
 */
