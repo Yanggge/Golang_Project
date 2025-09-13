@@ -38,7 +38,6 @@ func main() {
 		}
 		text := scanner.Text() // принимает значение польз. ввода
 		if text == "exit" {
-			LogEvents(&EvSlice, text, "До встречи")
 			fmt.Println("До встречи")
 			break // разорвать цикл
 		}
@@ -60,7 +59,7 @@ func main() {
 			fmt.Print("Введите содержание: ")
 			scanner.Scan()
 			content := scanner.Text()
-			if strings.TrimSpace(content) == "" {
+			if strings.TrimSpace(content) == "" { // strings.TrimSpace убирает все пробелы (и табы, и переносы строк) (если будет лишний пробел, то его не удалить по заголовку)
 				LogEvents(&EvSlice, content, "Вы ничего не ввели")
 				fmt.Println("Вы ничего не ввели")
 				continue
@@ -105,10 +104,9 @@ func main() {
 			}
 			if found { // если он нашел словов то found=true, т.е заменяем старый слайс, на новый где задачи с этим заголовком нет
 				DoSlice = NewSlice
-				fmt.Println(NewSlice)
 			} else { // если же заздачи с таким заголовком нет, то это и выводим
 				LogEvents(&EvSlice, tittle, "Задача с таким заголовком не найдена")
-				fmt.Println("Задача с таким заголовком не найдена")
+				fmt.Println("Задача с заголовком", tittle, " не найдена")
 			}
 
 			//Удаление по номеру задачи (старый варинат)
@@ -176,6 +174,7 @@ func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha, evslice *[]Events) 
 	fmt.Print("Укажите какой статус задать: выполнено/не выполнено: ")
 	scanner.Scan()
 	status := scanner.Text()
+	LogEvents(evslice, status, "")
 	switch status {
 	case "выполнено":
 		(*slice)[num-1].Status = true // слайс[номер задачи - 1, т.к индекс наинается с нуля]
@@ -186,7 +185,6 @@ func StatusEchange(scanner *bufio.Scanner, slice *[]Zadacha, evslice *[]Events) 
 	default:
 		LogEvents(evslice, status, "Вы указали неверный статус")
 		fmt.Println("Вы указали неверный статус")
-		return
 	}
 }
 
